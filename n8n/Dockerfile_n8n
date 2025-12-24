@@ -1,5 +1,5 @@
 # Basis: n8n Alpine Image (1.x Versionen nutzen Alpine)
-FROM n8nio/n8n:1.118.2
+FROM n8nio/n8n:1.123.9
 
 # Root User für Installation
 USER root
