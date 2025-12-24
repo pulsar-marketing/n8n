@@ -54,7 +54,7 @@
       "type": "n8n-nodes-base.ssh",
       "typeVersion": 1,
       "position": [
-        592,
+        496,
         -208
       ],
       "id": "785ece46-fd3c-43f7-8c77-6f058f7cc834",
@@ -88,36 +88,16 @@
     },
     {
       "parameters": {
-        "command": "=cat /backups/{{ $('Code in JavaScript').item.json.filename }} | base64",
-        "cwd": "/tmp"
+        "command": "=sshpass -p 'db*MaiL22#cloUd' scp -o StrictHostKeyChecking=no root@db.codermatrix.com:/backups/{{ $('Code in JavaScript').item.json.filename }} /data/files/{{ $('Code in JavaScript').item.json.filename }}\n"
       },
-      "type": "n8n-nodes-base.ssh",
+      "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
         304,
         -208
       ],
       "id": "c1c12c6a-b85b-4312-9e37-188df1e4062e",
-      "name": "Download DB",
-      "credentials": {
-        "sshPassword": {
-          "id": "sIom8516ngU0IF90",
-          "name": "SSH db.codermatrix.com"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const base64Data = $input.first().json.stdout;\nconst binaryData = Buffer.from(base64Data, 'base64');\nconst filename = $('Code in JavaScript').item.json.filename;\nconst fs = require('fs');\nconst path = `/data/files/${filename}`;\nfs.writeFileSync(path, binaryData);\nreturn [{ json: { filename, path, size: binaryData.length } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        400,
-        -208
-      ],
-      "id": "e2d34c5e-d96c-6523-af48-3aagf2f5273g",
-      "name": "Convert to Binary"
+      "name": "Download DB"
     }
   ],
   "pinData": {},
@@ -167,17 +147,6 @@
       ]
     },
     "Download DB": {
-      "main": [
-        [
-          {
-            "node": "Convert to Binary",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Convert to Binary": {
       "main": [
         [
           {

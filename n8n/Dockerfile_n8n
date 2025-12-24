@@ -28,8 +28,8 @@ RUN apk add --no-cache \
     tini \
     tzdata
 
-# n8n global installieren
-RUN npm install -g n8n@2.2.1
+# n8n global installieren (immer neueste Version)
+RUN npm install -g n8n
 
 # Cloudflared installieren
 RUN curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared && \
