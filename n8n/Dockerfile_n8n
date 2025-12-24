@@ -1,23 +1,55 @@
-# Basis: n8n Alpine Image (1.x Versionen nutzen Alpine)
-FROM n8nio/n8n:1.123.9
+# Multi-stage Build für n8n 2.x mit zusätzlichen Tools
+# https://github.com/n8n-io/n8n/tags
+
+# Stage 1: Base Alpine mit Node.js
+FROM node:22-alpine3.20 AS base
 
 # Root User für Installation
 USER root
 
-# Alle notwendigen Pakete installieren
+# System-Pakete installieren
 RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    build-base \
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    giflib-dev \
+    pixman-dev \
+    pangomm-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    git \
+    graphicsmagick \
+    curl \
     sshpass \
-    curl
+    openssh-client \
+    tini \
+    tzdata
+
+# n8n global installieren
+RUN npm install -g n8n@2.2.1
 
 # Cloudflared installieren
 RUN curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared && \
     chmod +x /usr/local/bin/cloudflared
 
-# Zurück zu n8n User
-USER node
+# n8n User erstellen
+RUN addgroup -g 1000 node || true && \
+    adduser -u 1000 -G node -s /bin/sh -D node 2>/dev/null || true
 
 # Arbeitsverzeichnis
 WORKDIR /home/node
 
-# Standard n8n Entrypoint
-ENTRYPOINT ["tini", "--", "/docker-entrypoint.sh"]
+# Zu node User wechseln
+USER node
+
+# n8n Datenverzeichnis
+RUN mkdir -p /home/node/.n8n
+
+# Expose ports
+EXPOSE 5678
+
+# Entrypoint
+ENTRYPOINT ["tini", "--", "n8n"]
