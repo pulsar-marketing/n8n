@@ -1,0 +1,173 @@
+{
+  "name": "Backup PPC DB",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        -128
+      ],
+      "id": "7dd580da-865b-42ef-9d45-deb6d9d2c785",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "command": "=sudo mysqldump -u root -p PREPAIDCALL | gzip > /backups/{{ $json[\"filename\"] }}",
+        "cwd": "/backups"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -208
+      ],
+      "id": "2716f29b-0edd-46d7-978a-934a2293daa2",
+      "name": "Backup PPC",
+      "credentials": {
+        "sshPassword": {
+          "id": "9givTp4ex4UTT3wa",
+          "name": "ppc.codermatrix.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=sshpass -p 'D3nKgDDJ' scp -o StrictHostKeyChecking=no root@ppc.codermatrix.com:/backups/{{ $('Code in JavaScript').item.json.filename }} /data/files/{{ $('Code in JavaScript').item.json.filename }}\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        304,
+        -208
+      ],
+      "id": "95d73445-cc13-40b6-b596-75f650343279",
+      "name": "Download PPC"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        -320
+      ],
+      "id": "f6ebec82-f126-4820-a2be-dc506b8155d1",
+      "name": "Schedule Trigger",
+      "notesInFlow": true,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst year = now.getFullYear();\nconst month = String(now.getMonth() + 1).padStart(2, '0');\nconst day = String(now.getDate()).padStart(2, '0');\nconst hour = String(now.getHours()).padStart(2, '0');\nconst filename = `ppc_back_${year}-${month}-${day}_${hour}.sql.gz`;\nreturn [{ json: { filename } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -208
+      ],
+      "id": "cd5b6821-360a-4050-b371-95d986404b14",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "command": "=rm /backups/{{ $('Code in JavaScript').item.json.filename }}",
+        "cwd": "/tmp"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        496,
+        -208
+      ],
+      "id": "69912ce4-3aac-447c-b34d-490d584e52e3",
+      "name": "Delete Backup",
+      "credentials": {
+        "sshPassword": {
+          "id": "9givTp4ex4UTT3wa",
+          "name": "ppc.codermatrix.com"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backup PPC": {
+      "main": [
+        [
+          {
+            "node": "Download PPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download PPC": {
+      "main": [
+        [
+          {
+            "node": "Delete Backup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Backup PPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "58c0a1f4-b0b1-4a21-9d90-21d6be712422",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "802efb851dd02c3004d5a3d3ef58c267f15c8a758784c6248714bf8d05e536b5"
+  },
+  "id": "pRzfcuAj3DmLehe7",
+  "tags": []
+}

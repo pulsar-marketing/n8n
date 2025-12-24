@@ -1,0 +1,7 @@
+
+.DS_Store
+Workflows.zip
+mysql/mysql-data/*
+n8n/downloads/*
+n8n/n8n-data/*
+n8n/mykeys/id_rsa

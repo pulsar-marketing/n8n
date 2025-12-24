@@ -1,0 +1,119 @@
+services:
+  n8n:
+    image: n8n-custom:latest
+    build:
+      context: .
+      dockerfile: Dockerfile_n8n
+    restart: unless-stopped
+    container_name: n8n-custom
+    ports:
+      - "5678:5678"
+      - "5679:5679" # Broker-Port für Task Runner
+    environment:
+    # Basic n8n settings
+      - N8N_SECURE_COOKIE=false
+      - N8N_HOST=n8n.codermatrix.de
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://n8n.codermatrix.de/
+      - N8N_ENABLE_UNSAFE_FUNCTIONS=true
+      - NODES_EXCLUDE="[]"
+
+      #- N8N_BASIC_AUTH_ACTIVE=true
+      #- N8N_BASIC_AUTH_USER=admin
+      #- N8N_BASIC_AUTH_PASSWORD=adminpassword
+      #- N8N_LISTEN_ADDRESS=0.0.0.0
+    
+
+      # Code Node settings - Puppeteer erlauben
+      - NODE_FUNCTION_ALLOW_BUILTIN=*
+      - NODE_FUNCTION_ALLOW_EXTERNAL=*
+      - NODE_ENV=production
+
+      # Timezone
+      - GENERIC_TIMEZONE=Europe/Berlin
+      - TZ=Europe/Berlin
+
+      # Task Runner settings
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_RUNNERS_MODE=external
+      - N8N_RUNNERS_BROKER_LISTEN_ADDRESS=0.0.0.0
+      - N8N_RUNNERS_BROKER_PORT=5679
+      - N8N_RUNNERS_AUTH_TOKEN=jr4QeusXoo6oIyklfo6LUJci2gK8hrkl
+      # - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+
+      # Logging
+      - N8N_LOG_LEVEL=info
+
+      # Proxy settings (für Cloudflare Tunnel)
+      - N8N_PROXY_HOPS=1
+    volumes:
+      - ./n8n-data:/home/node/.n8n
+      - ./downloads:/data/files
+      - ./mykeys:/data/ssh
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # ← Diese Zeile hinzufügen!
+    networks:
+      - n8n-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+      
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=eyJhIjoiZGY2YjM1Nzg0ZWUxMDFmZjVmMjk3YWU4NDIxYTgzYTgiLCJ0IjoiY2EyMWMxMzItMWY4MS00OGU4LThhMzYtYzUwNTM1ZDZhMzMzIiwicyI6Ik5XTXhOR0kzTlRZdFkyVTRNUzAwTTJWakxUazBORFV0T1dGak1UQTBPVEkxTkdRMSJ9
+    networks:
+      - n8n-network
+    depends_on:
+      - n8n
+
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile_runner
+    container_name: runner
+    restart: unless-stopped
+    environment:
+      # Runner settings
+      - N8N_RUNNERS_AUTH_TOKEN=jr4QeusXoo6oIyklfo6LUJci2gK8hrkl
+      - N8N_RUNNERS_TASK_BROKER_URI=http://n8n:5679
+      - N8N_RUNNERS_MAX_CONCURRENCY=5
+      
+      # Node settings
+      - NODE_OPTIONS=--max-old-space-size=2048
+      - NODE_FUNCTION_ALLOW_BUILTIN=child_process,fs
+      
+      # Timezone
+      - TZ=Europe/Berlin
+    volumes:
+      # Shared memory für Chromium (wichtig für Puppeteer!)
+      - /dev/shm:/dev/shm
+      - ./downloads:/data/files
+    depends_on:
+      n8n:
+        condition: service_healthy
+    networks:
+      - n8n-network
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+    # Security
+    security_opt:
+      - seccomp:unconfined
+    # Mehr shared memory für Chromium
+    shm_size: 2gb
+
+networks:
+  n8n-network:
+    driver: bridge

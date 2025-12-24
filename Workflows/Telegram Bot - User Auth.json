@@ -1,0 +1,473 @@
+{
+  "name": "Telegram Bot - User Auth",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "download": false
+        }
+      },
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        80
+      ],
+      "id": "50cdaeb1-db72-4670-ac89-f863db8f2f62",
+      "webhookId": "b6c78885-697a-4321-bb5a-0aefdc02fdb9",
+      "credentials": {
+        "telegramApi": {
+          "id": "9s04JXznSytj05R8",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "value2": "/listusers"
+            }
+          ]
+        }
+      },
+      "name": "Ist /listusers Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        80
+      ],
+      "id": "118f4fd6-4bea-4b46-9717-792021ac72f3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.message.from.id }}",
+              "operation": "equal",
+              "value2": 1031970162
+            }
+          ]
+        }
+      },
+      "name": "Ist Admin?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "86a61a9a-2e67-484b-a2b6-b23345ff897a"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT u.user_id, u.username, u.first_name, u.last_seen,\n       CASE WHEN w.user_id IS NOT NULL THEN 'Ja' ELSE 'Nein' END as whitelist\nFROM telegram_users u\nLEFT JOIN telegram_whitelist w ON u.user_id = w.user_id\nORDER BY u.last_seen DESC\nLIMIT 50;"
+      },
+      "name": "User aus DB holen",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        208,
+        32
+      ],
+      "id": "3f0a2b17-82e0-4b28-86b8-3b8bb7e4c4df",
+      "credentials": {
+        "mySql": {
+          "id": "m987xF99WcbBtjZ4",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const users = $input.all();\n\nlet text = `📊 *Registrierte Nutzer:* ${users.length}\\n\\n`;\n\nusers.forEach((item, index) => {\n  const user = item.json;\n  const status = user.whitelist === 'Ja' ? '✅' : '❌';\n  text += `${status} *${user.first_name || 'Unbekannt'}*\\n`;\n  text += `   @${user.username || 'kein username'}\\n`;\n  text += `   ID: \\`${user.user_id}\\`\\n`;\n  text += `   Zuletzt: ${new Date(user.last_seen).toLocaleString('de-DE')}\\n\\n`;\n});\n\nreturn [{ json: { text } }];"
+      },
+      "name": "Liste formatieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        368,
+        80
+      ],
+      "id": "bcb82f22-a00a-4745-8483-e8ff9e75164f"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node['Telegram Trigger'].json.message.chat.id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Liste senden",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        576,
+        80
+      ],
+      "id": "03d88237-5fab-43ba-b821-d05b713ea4fa",
+      "webhookId": "bf5acb3c-ba6a-4ad0-b4bd-95aa13d09cb9",
+      "credentials": {
+        "telegramApi": {
+          "id": "9s04JXznSytj05R8",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node['Telegram Trigger'].json.message.chat.id }}",
+        "text": "❌ Keine Berechtigung für diesen Command.",
+        "additionalFields": {}
+      },
+      "name": "Nicht Admin - Ablehnung",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        176,
+        240
+      ],
+      "id": "3b2a56d3-1184-4e39-bca3-2ca8c780bc54",
+      "webhookId": "8e34a7af-10e4-4718-a6ba-a478278bdf5e",
+      "credentials": {
+        "telegramApi": {
+          "id": "9s04JXznSytj05R8",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "number": [
+            {
+              "name": "user_id",
+              "value": "={{ $json.message.from.id }}"
+            }
+          ],
+          "string": [
+            {
+              "name": "chat_message",
+              "value": "={{ $json.message.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "User ID extrahieren",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        352
+      ],
+      "id": "ca2a4831-ec58-4347-949a-d2c0fa1bd29e"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*) as user_exists\nFROM telegram_users\nWHERE user_id = {{ $json.user_id }}"
+      },
+      "name": "Existiert User?",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        128,
+        416
+      ],
+      "id": "667cdad4-83e9-4421-878c-fb218509ba69",
+      "credentials": {
+        "mySql": {
+          "id": "m987xF99WcbBtjZ4",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.user_exists }}",
+              "operation": "larger"
+            }
+          ]
+        }
+      },
+      "name": "User vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        336,
+        432
+      ],
+      "id": "d831354e-a989-4ba9-a85c-937303e158d2"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node['Telegram Trigger'].json.message.chat.id }}",
+        "text": "❌ Du bist nicht registriert.",
+        "additionalFields": {}
+      },
+      "name": "User nicht gefunden",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        496,
+        656
+      ],
+      "id": "aba7e0f9-9099-4772-b065-db2a2bc2ce91",
+      "webhookId": "8e34a7af-10e4-4718-a6ba-a478278bdf5e",
+      "credentials": {
+        "telegramApi": {
+          "id": "9s04JXznSytj05R8",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        384
+      ],
+      "id": "def079c8-2edf-4f29-92aa-aaecf30ad92b",
+      "name": "Send a text message",
+      "webhookId": "302d3f64-b07a-482e-a03f-9acee11f5180",
+      "credentials": {
+        "telegramApi": {
+          "id": "9s04JXznSytj05R8",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "options": {
+          "systemMessage": "Du bist ein hilfreicher Assistent und heißt Clara."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        752,
+        384
+      ],
+      "id": "2dc1aee5-70c0-444b-b85a-73160b785938",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('User ID extrahieren').item.json.user_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        896,
+        624
+      ],
+      "id": "df05b7df-e4a6-423d-9d8b-0a23e4eda966",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        736,
+        624
+      ],
+      "id": "99fe7053-8149-4765-b7b0-5a9e8c94e5c8",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "wNW8Tss0xAq2ij8r",
+          "name": "OpenAi account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Ist /listusers Command?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ist /listusers Command?": {
+      "main": [
+        [
+          {
+            "node": "Ist Admin?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "User ID extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ist Admin?": {
+      "main": [
+        [
+          {
+            "node": "User aus DB holen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nicht Admin - Ablehnung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User aus DB holen": {
+      "main": [
+        [
+          {
+            "node": "Liste formatieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Liste formatieren": {
+      "main": [
+        [
+          {
+            "node": "Liste senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User ID extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Existiert User?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Existiert User?": {
+      "main": [
+        [
+          {
+            "node": "User vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "User nicht gefunden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3da891db-7485-48ec-97a9-3541416b57bf",
+  "meta": {
+    "instanceId": "802efb851dd02c3004d5a3d3ef58c267f15c8a758784c6248714bf8d05e536b5"
+  },
+  "id": "H2GtpnzjcSFSdOsp",
+  "tags": []
+}

@@ -1,0 +1,18 @@
+# Umgebungsvariablen mit Passwörtern
+.env
+
+# Backup Dateien
+*.sql
+*.tar.gz
+backup_*
+
+# macOS Dateien
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Docker Volumes (falls lokal gemountet)
+mysql_data/
+
+# Logs
+*.log

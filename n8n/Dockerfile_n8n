@@ -1,0 +1,23 @@
+# Basis: n8n Alpine Image (1.x Versionen nutzen Alpine)
+FROM n8nio/n8n:1.118.2
+
+# Root User für Installation
+USER root
+
+# Alle notwendigen Pakete installieren
+RUN apk add --no-cache \
+    sshpass \
+    curl
+
+# Cloudflared installieren
+RUN curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared && \
+    chmod +x /usr/local/bin/cloudflared
+
+# Zurück zu n8n User
+USER node
+
+# Arbeitsverzeichnis
+WORKDIR /home/node
+
+# Standard n8n Entrypoint
+ENTRYPOINT ["tini", "--", "/docker-entrypoint.sh"]

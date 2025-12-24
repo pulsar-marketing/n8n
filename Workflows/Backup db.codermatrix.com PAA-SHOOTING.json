@@ -1,0 +1,203 @@
+{
+  "name": "Backup db.codermatrix.com PAA-SHOOTING",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        -128
+      ],
+      "id": "7093220e-6717-48aa-a0ea-b1d76ea49698",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 12
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        -320
+      ],
+      "id": "2575fb9e-455b-4867-8b02-0d6a6bdea774",
+      "name": "Schedule Trigger",
+      "notesInFlow": true,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst year = now.getFullYear();\nconst month = String(now.getMonth() + 1).padStart(2, '0');\nconst day = String(now.getDate()).padStart(2, '0');\nconst hour = String(now.getHours()).padStart(2, '0');\nconst filename = `db_codermatrix_paa_shooting_${year}-${month}-${day}_${hour}.sql.gz`;\nreturn [{ json: { filename } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -208
+      ],
+      "id": "446b7d48-fb31-45e0-8056-f6597e387c62",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "command": "=rm /backups/{{ $('Code in JavaScript').item.json.filename }}",
+        "cwd": "/tmp"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        592,
+        -208
+      ],
+      "id": "785ece46-fd3c-43f7-8c77-6f058f7cc834",
+      "name": "Delete Backup",
+      "credentials": {
+        "sshPassword": {
+          "id": "sIom8516ngU0IF90",
+          "name": "SSH db.codermatrix.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=sudo mysqldump --databases paa-shooting | gzip > /backups/{{ $json[\"filename\"] }}",
+        "cwd": "/backups"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -208
+      ],
+      "id": "61571e8c-df09-4230-b387-9d74db940823",
+      "name": "Backup DB",
+      "credentials": {
+        "sshPassword": {
+          "id": "sIom8516ngU0IF90",
+          "name": "SSH db.codermatrix.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=cat /backups/{{ $('Code in JavaScript').item.json.filename }} | base64",
+        "cwd": "/tmp"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        304,
+        -208
+      ],
+      "id": "c1c12c6a-b85b-4312-9e37-188df1e4062e",
+      "name": "Download DB",
+      "credentials": {
+        "sshPassword": {
+          "id": "sIom8516ngU0IF90",
+          "name": "SSH db.codermatrix.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const base64Data = $input.first().json.stdout;\nconst binaryData = Buffer.from(base64Data, 'base64');\nconst filename = $('Code in JavaScript').item.json.filename;\nconst fs = require('fs');\nconst path = `/data/files/${filename}`;\nfs.writeFileSync(path, binaryData);\nreturn [{ json: { filename, path, size: binaryData.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -208
+      ],
+      "id": "e2d34c5e-d96c-6523-af48-3aagf2f5273g",
+      "name": "Convert to Binary"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Backup DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backup DB": {
+      "main": [
+        [
+          {
+            "node": "Download DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download DB": {
+      "main": [
+        [
+          {
+            "node": "Convert to Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to Binary": {
+      "main": [
+        [
+          {
+            "node": "Delete Backup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "813a5db7-0d8c-42cb-b3b9-61b74cbf58a2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "802efb851dd02c3004d5a3d3ef58c267f15c8a758784c6248714bf8d05e536b5"
+  },
+  "id": "qNv9RwTat2YmwzAp",
+  "tags": []
+}

@@ -1,0 +1,173 @@
+{
+  "name": "Backup AppDesigner DB",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        512,
+        288
+      ],
+      "id": "ade8f000-6190-45f2-b545-3f9cbcacdc59",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 3
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        512,
+        80
+      ],
+      "id": "638c57c6-aa82-4731-949d-27a303431e4a",
+      "name": "Schedule Trigger",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "authentication": "privateKey",
+        "command": "=docker exec config-db-1 mariadb-dump -u root -p'WgmCLfTWKyBioPoOXjFJ' cbui | gzip > /tmp/{{ $json[\"filename\"] }}",
+        "cwd": "/backups"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        912,
+        192
+      ],
+      "id": "c09a17ac-a0c3-4df2-b92d-806f9af10616",
+      "name": "Backup CBUI",
+      "credentials": {
+        "sshPrivateKey": {
+          "id": "nR7WIwVaVQZ6fAdZ",
+          "name": "magic_key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=scp -i /data/ssh/id_rsa -o StrictHostKeyChecking=no mc@cbui.cottbus.questnet.de:/tmp/{{ $('Code in JavaScript').item.json.filename }} /data/files/{{ $('Code in JavaScript').item.json.filename }}"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        192
+      ],
+      "id": "1a6cd098-62d8-46a5-9146-09fb7ab52641",
+      "name": "Download Backup"
+    },
+    {
+      "parameters": {
+        "authentication": "privateKey",
+        "command": "=rm /tmp/{{ $('Code in JavaScript').item.json.filename }}",
+        "cwd": "/tmp"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        192
+      ],
+      "id": "58198659-8a36-4373-92ef-f44737b9dc6b",
+      "name": "Delete Backup",
+      "credentials": {
+        "sshPrivateKey": {
+          "id": "nR7WIwVaVQZ6fAdZ",
+          "name": "magic_key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst year = now.getFullYear();\nconst month = String(now.getMonth() + 1).padStart(2, '0');\nconst day = String(now.getDate()).padStart(2, '0');\nconst hour = String(now.getHours()).padStart(2, '0');\nconst filename = `cbui_back_${year}-${month}-${day}_${hour}.sql.gz`;\nreturn [{ json: { filename } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        192
+      ],
+      "id": "00913b01-877f-4091-ad2d-6c5d3ca33fd3",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backup CBUI": {
+      "main": [
+        [
+          {
+            "node": "Download Backup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Backup": {
+      "main": [
+        [
+          {
+            "node": "Delete Backup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Backup CBUI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "be5dd215-68c3-4852-9812-a82878d8a6fa",
+  "meta": {
+    "instanceId": "802efb851dd02c3004d5a3d3ef58c267f15c8a758784c6248714bf8d05e536b5"
+  },
+  "id": "XB5mJnvx6D24i2ic",
+  "tags": []
+}

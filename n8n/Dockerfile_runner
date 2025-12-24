@@ -1,0 +1,18 @@
+FROM n8nio/runners:latest
+
+# Root bleiben für Installation
+USER root
+
+# sshpass installieren für SCP-Transfers
+RUN /sbin/apk add --no-cache sshpass openssh-client || \
+    (export PATH=$PATH:/sbin:/usr/sbin && apk add --no-cache sshpass openssh-client)
+
+# Arbeitsverzeichnis
+WORKDIR /home/node
+
+# Als node user ausführen (sicherer)
+#USER node
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD node -e "console.log('Runner healthy')" || exit 1

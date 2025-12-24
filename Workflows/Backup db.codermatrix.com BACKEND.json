@@ -1,0 +1,172 @@
+{
+  "name": "Backup db.codermatrix.com BACKEND",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        -128
+      ],
+      "id": "61a2218e-ced2-40f6-81ca-328efe7f7a65",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        -320
+      ],
+      "id": "94b0ed42-92de-414e-97ac-043849c6d848",
+      "name": "Schedule Trigger",
+      "notesInFlow": true,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst year = now.getFullYear();\nconst month = String(now.getMonth() + 1).padStart(2, '0');\nconst day = String(now.getDate()).padStart(2, '0');\nconst hour = String(now.getHours()).padStart(2, '0');\nconst filename = `db_codermatrix_BACKEND_${year}-${month}-${day}_${hour}.sql.gz`;\nreturn [{ json: { filename } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -208
+      ],
+      "id": "976be66b-1d80-41c8-ad3a-3a25c5ae7508",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "command": "=rm /backups/{{ $('Code in JavaScript').item.json.filename }}",
+        "cwd": "/tmp"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        496,
+        -208
+      ],
+      "id": "9780db75-45da-477b-a430-3ac7215e8d2b",
+      "name": "Delete Backup",
+      "credentials": {
+        "sshPassword": {
+          "id": "sIom8516ngU0IF90",
+          "name": "SSH db.codermatrix.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=sudo mysqldump --databases BACKEND_ISN BACKEND_MKDATEL | gzip > /backups/{{ $json[\"filename\"] }}",
+        "cwd": "/backups"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -208
+      ],
+      "id": "f40dacc5-807a-4f93-9bea-ab0f1b94b3aa",
+      "name": "Backup DB",
+      "credentials": {
+        "sshPassword": {
+          "id": "sIom8516ngU0IF90",
+          "name": "SSH db.codermatrix.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=sshpass -p 'db*MaiL22#cloUd' scp -o StrictHostKeyChecking=no root@db.codermatrix.com:/backups/{{ $('Code in JavaScript').item.json.filename }} /data/files/{{ $('Code in JavaScript').item.json.filename }}\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        304,
+        -208
+      ],
+      "id": "25824fdf-4394-41b9-a7a3-ad34e0461861",
+      "name": "Download DB"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Backup DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backup DB": {
+      "main": [
+        [
+          {
+            "node": "Download DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download DB": {
+      "main": [
+        [
+          {
+            "node": "Delete Backup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5335a1f1-62e5-4fb1-af17-8cc50c386162",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "802efb851dd02c3004d5a3d3ef58c267f15c8a758784c6248714bf8d05e536b5"
+  },
+  "id": "JoxhZVGytqVHDpUg",
+  "tags": []
+}
